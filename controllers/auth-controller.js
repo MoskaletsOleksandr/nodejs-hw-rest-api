@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import gravatar from 'gravatar';
 
 import User from '../models/user.js';
 
@@ -14,10 +15,15 @@ const register = async (req, res) => {
   if (searchedUser) {
     throw HttpError(409, 'Email in use');
   }
+  const avatarURL = gravatar.url(email, { s: '200', r: 'pg', d: 'mp' });
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  const newUser = await User.create({ ...req.body, password: hashedPassword });
+  const newUser = await User.create({
+    ...req.body,
+    password: hashedPassword,
+    avatarURL,
+  });
 
   res.status(201).json({
     user: {
