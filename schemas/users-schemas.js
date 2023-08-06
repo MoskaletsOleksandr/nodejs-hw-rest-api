@@ -46,24 +46,15 @@ const userUpdateSubscriptionSchema = Joi.object({
     }),
 });
 
-// const userUpdateAvatarSchema = Joi.object({
-//   avatar: Joi.any().required().messages({
-//     'any.required': 'Avatar is required!',
-//   }),
-// });
-//   avatar: Joi.string()
-//     .regex(/\.(jpg|jpeg|png)$/)
-//     .required()
-//     .messages({
-//       'string.empty': 'Avatar field must not be empty!',
-//       'any.required': 'Avatar field is required!',
-//       'string.pattern.base': 'Invalid file type! Must be JPG or PNG',
-//     }),
-// });
+const userUpdateAvatarSchema = Joi.object({
+  avatar: Joi.any().required().messages({
+    'any.required': 'Avatar is required!',
+  }),
+});
 
 export default {
   userRegisterSchema,
   userLoginSchema,
   userUpdateSubscriptionSchema,
-  // userUpdateAvatarSchema,
+  userUpdateAvatarSchema,
 };

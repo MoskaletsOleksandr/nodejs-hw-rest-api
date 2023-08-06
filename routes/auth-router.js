@@ -5,6 +5,7 @@ import { validateBody } from '../decorators/index.js';
 import usersSchemas from '../schemas/users-schemas.js';
 import {
   authenticate,
+  checkFileType,
   isEmptyAvatar,
   isEmptySubscription,
   upload,
@@ -39,7 +40,8 @@ authRouter.patch(
 authRouter.patch(
   '/avatars',
   authenticate,
-  isEmptyAvatar,
+  // isEmptyAvatar,
+  // checkFileType,
   upload.single('avatar'),
   // validateBody(usersSchemas.userUpdateAvatarSchema),
   authController.changeAvatar
