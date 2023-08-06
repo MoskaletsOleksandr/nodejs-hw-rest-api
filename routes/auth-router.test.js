@@ -16,12 +16,13 @@ const testData = {
 
 describe('test login route', () => {
   let server;
+  let testUser;
 
   beforeAll(async () => {
     await mongoose.connect(DB_HOST_TEST);
     server = app.listen(PORT);
 
-    let testUser = await User.findOne({ email: testData.email });
+    testUser = await User.findOne({ email: testData.email });
 
     if (!testUser) {
       const avatarURL = gravatar.url(testData.email, {
@@ -40,12 +41,10 @@ describe('test login route', () => {
   });
 
   afterAll(async () => {
+    await User.findByIdAndDelete(testUser._id);
+
     await mongoose.connection.close();
     server.close();
-
-    // if (testUser._id) {
-    //   await User.findByIdAndDelete(testUser._id);
-    // }
   });
 
   test('test login with correct data', async () => {
