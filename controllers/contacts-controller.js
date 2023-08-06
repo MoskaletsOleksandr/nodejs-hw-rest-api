@@ -4,8 +4,27 @@ import { ctrlWrapper } from '../decorators/index.js';
 import { HttpError } from '../helpers/index.js';
 
 const getAll = async (req, res, next) => {
-  const result = await Contact.find();
-  res.json(result);
+  const { _id: owner } = req.user;
+  const { page = 1, limit = 10, favorite } = req.query;
+  const skip = (page - 1) * limit;
+  const query = { owner };
+
+  if (favorite) {
+    query.favorite = favorite === 'true';
+  }
+
+  const total = await Contact.find(query);
+  const result = await Contact.find(query, '', { skip, limit }).populate(
+    'owner',
+    'email'
+  );
+
+  res.json({
+    contacts: result,
+    page: Number(page),
+    contacts_per_page: result.length,
+    total: total.length,
+  });
 };
 
 const getById = async (req, res, next) => {
@@ -18,7 +37,8 @@ const getById = async (req, res, next) => {
 };
 
 const add = async (req, res, next) => {
-  const result = await Contact.create(req.body);
+  const { _id: owner } = req.user;
+  const result = await Contact.create({ ...req.body, owner });
   res.status(201).json(result);
 };
 
