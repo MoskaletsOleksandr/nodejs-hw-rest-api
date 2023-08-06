@@ -5,8 +5,8 @@ import { validateBody } from '../decorators/index.js';
 import usersSchemas from '../schemas/users-schemas.js';
 import {
   authenticate,
-  checkFileType,
-  isEmptyAvatar,
+  // checkFileType,
+  // isEmptyAvatar,
   isEmptySubscription,
   upload,
 } from '../middlewares/index.js';

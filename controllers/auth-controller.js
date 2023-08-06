@@ -12,6 +12,10 @@ import { HttpError } from '../helpers/index.js';
 
 const { JWT_SECRET } = process.env;
 
+const replaceSpacesWithUnderscores = (filename) => {
+  return filename.replace(/\s+/g, '_');
+};
+
 const register = async (req, res) => {
   const { email, password } = req.body;
   const searchedUser = await User.findOne({ email });
@@ -99,22 +103,20 @@ const changeAvatar = async (req, res) => {
   const { path: filePath } = req.file;
   const { originalname } = req.file;
 
-  try {
-    const image = await jimp.read(filePath);
-    await image.resize(250, 250);
+  const image = await jimp.read(filePath);
+  await image.resize(250, 250);
 
-    const uniqueFileName = `${_id}-${Date.now()}_${originalname}`;
-    const newPath = path.join('public', 'avatars', uniqueFileName);
+  const normalizedName = replaceSpacesWithUnderscores(originalname);
 
-    await fs.promises.rename(filePath, newPath);
-    await User.findByIdAndUpdate(_id, { avatarURL: newPath });
+  const uniqueFileName = `${_id}-${Date.now()}_${normalizedName}`;
+  const newPath = path.join('avatars', uniqueFileName);
 
-    res.json({
-      avatarURL: newPath,
-    });
-  } catch (error) {
-    res.status(401).json({ message: 'Not authorized' });
-  }
+  await fs.promises.rename(filePath, path.join('public', newPath));
+  await User.findByIdAndUpdate(_id, { avatarURL: newPath });
+
+  res.json({
+    avatarURL: newPath,
+  });
 };
 
 export default {
