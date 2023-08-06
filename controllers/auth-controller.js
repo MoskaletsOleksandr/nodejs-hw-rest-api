@@ -91,10 +91,17 @@ const updateUserSubscription = async (req, res) => {
   res.json(result);
 };
 
+const changeAvatar = async (req, res) => {
+  const { _id } = req.user;
+  console.log(_id);
+  console.log(req.file);
+};
+
 export default {
   register: ctrlWrapper(register),
   login: ctrlWrapper(login),
   getCurrent: ctrlWrapper(getCurrent),
   logout: ctrlWrapper(logout),
   updateUserSubscription: ctrlWrapper(updateUserSubscription),
+  changeAvatar: ctrlWrapper(changeAvatar),
 };
