@@ -1,6 +1,9 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import gravatar from 'gravatar';
+import jimp from 'jimp';
+import fs from 'fs';
+import path from 'path';
 
 import User from '../models/user.js';
 
@@ -93,8 +96,25 @@ const updateUserSubscription = async (req, res) => {
 
 const changeAvatar = async (req, res) => {
   const { _id } = req.user;
-  console.log(_id);
-  console.log(req.file);
+  const { path: filePath } = req.file;
+  const { originalname } = req.file;
+
+  try {
+    const image = await jimp.read(filePath);
+    await image.resize(250, 250);
+
+    const uniqueFileName = `${_id}-${Date.now()}_${originalname}`;
+    const newPath = path.join('public', 'avatars', uniqueFileName);
+
+    await fs.promises.rename(filePath, newPath);
+    await User.findByIdAndUpdate(_id, { avatarURL: newPath });
+
+    res.json({
+      avatarURL: newPath,
+    });
+  } catch (error) {
+    res.status(401).json({ message: 'Not authorized' });
+  }
 };
 
 export default {
