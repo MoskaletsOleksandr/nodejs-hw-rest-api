@@ -41,7 +41,7 @@ authRouter.patch(
   '/avatars',
   authenticate,
   // isEmptyAvatar,
-  // checkFileType,
+  // checkFileType(['image/jpeg', 'image/png']),
   // validateBody(usersSchemas.userUpdateAvatarSchema),
   upload.single('avatar'),
   authController.changeAvatar
