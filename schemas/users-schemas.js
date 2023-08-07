@@ -46,15 +46,8 @@ const userUpdateSubscriptionSchema = Joi.object({
     }),
 });
 
-const userUpdateAvatarSchema = Joi.object({
-  avatar: Joi.any().required().messages({
-    'any.required': 'Avatar is required!',
-  }),
-});
-
 export default {
   userRegisterSchema,
   userLoginSchema,
   userUpdateSubscriptionSchema,
-  userUpdateAvatarSchema,
 };
