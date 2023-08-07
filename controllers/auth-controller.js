@@ -2,8 +2,8 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import gravatar from 'gravatar';
 import jimp from 'jimp';
-import fs from 'fs';
 import path from 'path';
+import fs from 'fs';
 
 import User from '../models/user.js';
 
@@ -102,16 +102,37 @@ const changeAvatar = async (req, res) => {
   const { _id } = req.user;
   const { path: filePath } = req.file;
   const { originalname } = req.file;
+  const minSize = 250;
 
   const image = await jimp.read(filePath);
-  await image.resize(250, 250);
+
+  let width = image.bitmap.width;
+  let height = image.bitmap.height;
+
+  if (width < height) {
+    height = Math.floor((height / width) * minSize);
+    width = minSize;
+  } else {
+    width = Math.floor((width / height) * minSize);
+    height = minSize;
+  }
+
+  await image.resize(width, height);
+
+  await image.cover(
+    minSize,
+    minSize,
+    jimp.HORIZONTAL_ALIGN_CENTER | jimp.VERTICAL_ALIGN_MIDDLE
+  );
+
+  await fs.promises.unlink(filePath);
 
   const normalizedName = replaceSpacesWithUnderscores(originalname);
 
   const uniqueFileName = `${_id}-${Date.now()}_${normalizedName}`;
   const newPath = path.join('avatars', uniqueFileName);
 
-  await fs.promises.rename(filePath, path.join('public', newPath));
+  await image.write(path.join('public', newPath));
   await User.findByIdAndUpdate(_id, { avatarURL: newPath });
 
   res.json({
