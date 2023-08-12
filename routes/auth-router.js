@@ -3,7 +3,13 @@ import express from 'express';
 import authController from '../controllers/auth-controller.js';
 import { validateBody } from '../decorators/index.js';
 import usersSchemas from '../schemas/users-schemas.js';
-import { authenticate, isEmptySubscription } from '../middlewares/index.js';
+import {
+  authenticate,
+  checkFileType,
+  isEmptyAvatar,
+  isEmptySubscription,
+  upload,
+} from '../middlewares/index.js';
 
 const authRouter = express.Router();
 
@@ -29,6 +35,15 @@ authRouter.patch(
   isEmptySubscription,
   validateBody(usersSchemas.userUpdateSubscriptionSchema),
   authController.updateUserSubscription
+);
+
+authRouter.patch(
+  '/avatars',
+  authenticate,
+  upload.single('avatar'),
+  isEmptyAvatar,
+  checkFileType(['image/jpeg', 'image/png']),
+  authController.changeAvatar
 );
 
 export default authRouter;

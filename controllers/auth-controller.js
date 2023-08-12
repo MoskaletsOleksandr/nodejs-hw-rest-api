@@ -1,5 +1,9 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import gravatar from 'gravatar';
+import jimp from 'jimp';
+import path from 'path';
+import fs from 'fs';
 
 import User from '../models/user.js';
 
@@ -8,16 +12,25 @@ import { HttpError } from '../helpers/index.js';
 
 const { JWT_SECRET } = process.env;
 
+const replaceSpacesWithUnderscores = (filename) => {
+  return filename.replace(/\s+/g, '_');
+};
+
 const register = async (req, res) => {
   const { email, password } = req.body;
   const searchedUser = await User.findOne({ email });
   if (searchedUser) {
     throw HttpError(409, 'Email in use');
   }
+  const avatarURL = gravatar.url(email, { s: '200', r: 'pg', d: 'mp' });
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  const newUser = await User.create({ ...req.body, password: hashedPassword });
+  const newUser = await User.create({
+    ...req.body,
+    password: hashedPassword,
+    avatarURL,
+  });
 
   res.status(201).json({
     user: {
@@ -85,10 +98,53 @@ const updateUserSubscription = async (req, res) => {
   res.json(result);
 };
 
+const changeAvatar = async (req, res) => {
+  const { _id } = req.user;
+  const { path: filePath } = req.file;
+  const { originalname } = req.file;
+  const minSize = 250;
+
+  const image = await jimp.read(filePath);
+
+  let width = image.bitmap.width;
+  let height = image.bitmap.height;
+
+  if (width < height) {
+    height = Math.floor((height / width) * minSize);
+    width = minSize;
+  } else {
+    width = Math.floor((width / height) * minSize);
+    height = minSize;
+  }
+
+  await image.resize(width, height);
+
+  await image.cover(
+    minSize,
+    minSize,
+    jimp.HORIZONTAL_ALIGN_CENTER | jimp.VERTICAL_ALIGN_MIDDLE
+  );
+
+  await fs.promises.unlink(filePath);
+
+  const normalizedName = replaceSpacesWithUnderscores(originalname);
+
+  const uniqueFileName = `${_id}-${Date.now()}_${normalizedName}`;
+  const newPath = path.join('avatars', uniqueFileName);
+
+  await image.write(path.join('public', newPath));
+  await User.findByIdAndUpdate(_id, { avatarURL: newPath });
+
+  res.json({
+    avatarURL: newPath,
+  });
+};
+
 export default {
   register: ctrlWrapper(register),
   login: ctrlWrapper(login),
   getCurrent: ctrlWrapper(getCurrent),
   logout: ctrlWrapper(logout),
   updateUserSubscription: ctrlWrapper(updateUserSubscription),
+  changeAvatar: ctrlWrapper(changeAvatar),
 };
