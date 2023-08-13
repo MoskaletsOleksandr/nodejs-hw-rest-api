@@ -4,11 +4,12 @@ import gravatar from 'gravatar';
 import jimp from 'jimp';
 import path from 'path';
 import fs from 'fs';
+import { nanoid } from 'nanoid';
 
 import User from '../models/user.js';
 
 import { ctrlWrapper } from '../decorators/index.js';
-import { HttpError } from '../helpers/index.js';
+import { HttpError, sendEmail, createVerifyEmail } from '../helpers/index.js';
 
 const { JWT_SECRET } = process.env;
 
@@ -25,12 +26,18 @@ const register = async (req, res) => {
   const avatarURL = gravatar.url(email, { s: '200', r: 'pg', d: 'mp' });
 
   const hashedPassword = await bcrypt.hash(password, 10);
+  const verificationToken = nanoid();
 
   const newUser = await User.create({
     ...req.body,
     password: hashedPassword,
     avatarURL,
+    verificationToken,
   });
+
+  const verifyEmail = createVerifyEmail({ email, verificationToken });
+
+  await sendEmail(verifyEmail);
 
   res.status(201).json({
     user: {
@@ -40,12 +47,64 @@ const register = async (req, res) => {
   });
 };
 
+const verify = async (req, res) => {
+  const { verificationToken } = req.params;
+  const searchedUser = await User.findOne({ verificationToken });
+  if (!searchedUser) {
+    throw HttpError(404, 'User not found');
+  }
+
+  await User.findByIdAndUpdate(searchedUser._id, {
+    verify: true,
+    verificationToken: ' ',
+  });
+
+  res.json({ message: 'Verification successful' });
+};
+
+const resendVerifyEmail = async (req, res) => {
+  const { email } = req.body;
+  const searchedUser = await User.findOne({ email });
+  if (!searchedUser) {
+    throw HttpError(404, 'User not found');
+  }
+
+  if (searchedUser.verify) {
+    throw HttpError(400, 'Verification has already been passed');
+  }
+
+  const verifyEmail = createVerifyEmail({
+    email,
+    verificationToken: searchedUser.verificationToken,
+  });
+
+  await sendEmail(verifyEmail);
+
+  res.json({ message: 'Verification email sent' });
+};
+
+const deleteUser = async (req, res) => {
+  const { verificationToken } = req.params;
+  const searchedUser = await User.findOne({ verificationToken });
+  if (!searchedUser) {
+    throw HttpError(404, 'User not found');
+  }
+
+  await User.findByIdAndDelete(searchedUser._id);
+
+  res.json({ message: 'User deleted successfully' });
+};
+
 const login = async (req, res) => {
   const errorMessage = 'Email or password is wrong';
   const { email, password } = req.body;
   const searchedUser = await User.findOne({ email });
   if (!searchedUser) {
     throw HttpError(401, errorMessage);
+  }
+
+  if (!searchedUser.verify) {
+    throw HttpError(404, 'User email is not verified');
   }
 
   const passwordCompare = await bcrypt.compare(password, searchedUser.password);
@@ -142,6 +201,9 @@ const changeAvatar = async (req, res) => {
 
 export default {
   register: ctrlWrapper(register),
+  verify: ctrlWrapper(verify),
+  resendVerifyEmail: ctrlWrapper(resendVerifyEmail),
+  deleteUser: ctrlWrapper(deleteUser),
   login: ctrlWrapper(login),
   getCurrent: ctrlWrapper(getCurrent),
   logout: ctrlWrapper(logout),
