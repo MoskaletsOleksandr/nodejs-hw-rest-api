@@ -46,8 +46,19 @@ const userUpdateSubscriptionSchema = Joi.object({
     }),
 });
 
+const userEmailSchema = Joi.object({
+  email: Joi.string().email().required().max(49).messages({
+    'any.required': 'missing required field email!',
+    'string.empty': "Email can't be empty!",
+    'string.email': 'Invalid email format!',
+    'string.base': 'Email must be a string!',
+    'string.max': 'Email must not exceed 49 characters!',
+  }),
+});
+
 export default {
   userRegisterSchema,
   userLoginSchema,
   userUpdateSubscriptionSchema,
+  userEmailSchema,
 };

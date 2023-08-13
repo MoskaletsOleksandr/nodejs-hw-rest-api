@@ -9,9 +9,9 @@ import { nanoid } from 'nanoid';
 import User from '../models/user.js';
 
 import { ctrlWrapper } from '../decorators/index.js';
-import { HttpError, sendEmail } from '../helpers/index.js';
+import { HttpError, sendEmail, createVerifyEmail } from '../helpers/index.js';
 
-const { JWT_SECRET, BASE_URL } = process.env;
+const { JWT_SECRET } = process.env;
 
 const replaceSpacesWithUnderscores = (filename) => {
   return filename.replace(/\s+/g, '_');
@@ -35,11 +35,7 @@ const register = async (req, res) => {
     verificationToken,
   });
 
-  const verifyEmail = {
-    to: email,
-    subject: 'Verify',
-    html: `<a href="${BASE_URL}/users/verify/${verificationToken}" target="_blank" >Click me to verify</a>`,
-  };
+  const verifyEmail = createVerifyEmail({ email, verificationToken });
 
   await sendEmail(verifyEmail);
 
@@ -55,7 +51,7 @@ const verify = async (req, res) => {
   const { verificationToken } = req.params;
   const searchedUser = await User.findOne({ verificationToken });
   if (!searchedUser) {
-    throw HttpError(401, 'User not found');
+    throw HttpError(404, 'User not found');
   }
 
   await User.findByIdAndUpdate(searchedUser._id, {
@@ -64,6 +60,39 @@ const verify = async (req, res) => {
   });
 
   res.json({ message: 'Verification successful' });
+};
+
+const resendVerifyEmail = async (req, res) => {
+  const { email } = req.body;
+  const searchedUser = await User.findOne({ email });
+  if (!searchedUser) {
+    throw HttpError(404, 'User not found');
+  }
+
+  if (searchedUser.verify) {
+    throw HttpError(400, 'Verification has already been passed');
+  }
+
+  const verifyEmail = createVerifyEmail({
+    email,
+    verificationToken: searchedUser.verificationToken,
+  });
+
+  await sendEmail(verifyEmail);
+
+  res.json({ message: 'Verification email sent' });
+};
+
+const deleteUser = async (req, res) => {
+  const { verificationToken } = req.params;
+  const searchedUser = await User.findOne({ verificationToken });
+  if (!searchedUser) {
+    throw HttpError(404, 'User not found');
+  }
+
+  await User.findByIdAndDelete(searchedUser._id);
+
+  res.json({ message: 'User deleted successfully' });
 };
 
 const login = async (req, res) => {
@@ -75,7 +104,7 @@ const login = async (req, res) => {
   }
 
   if (!searchedUser.verify) {
-    throw HttpError(404, 'User is not verified');
+    throw HttpError(404, 'User email is not verified');
   }
 
   const passwordCompare = await bcrypt.compare(password, searchedUser.password);
@@ -173,6 +202,8 @@ const changeAvatar = async (req, res) => {
 export default {
   register: ctrlWrapper(register),
   verify: ctrlWrapper(verify),
+  resendVerifyEmail: ctrlWrapper(resendVerifyEmail),
+  deleteUser: ctrlWrapper(deleteUser),
   login: ctrlWrapper(login),
   getCurrent: ctrlWrapper(getCurrent),
   logout: ctrlWrapper(logout),

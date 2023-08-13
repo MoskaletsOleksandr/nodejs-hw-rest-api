@@ -22,6 +22,14 @@ authRouter.post(
 authRouter.get('/verify/:verificationToken', authController.verify);
 
 authRouter.post(
+  '/verify',
+  validateBody(usersSchemas.userEmailSchema),
+  authController.resendVerifyEmail
+);
+
+authRouter.get('/delete/:verificationToken', authController.deleteUser);
+
+authRouter.post(
   '/login',
   validateBody(usersSchemas.userLoginSchema),
   authController.login
